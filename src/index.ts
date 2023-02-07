@@ -1,8 +1,8 @@
 import express, { Request, Response } from "express";
 import cors from "cors";
-import { db } from "./database/BaseDatabase";
 import { TVideoDB } from "./types";
 import { Video } from "./models/Video";
+import { VideoDatabase } from "./database/VideoDatabase";
 
 const app = express();
 
@@ -33,21 +33,25 @@ app.get("/ping", async (req: Request, res: Response) => {
 
 app.get("/videos", async (req: Request, res: Response) => {
   try {
-    const q = req.query.q;
-    let videosDB;
+    // let videosDB;
+    
+    // if (q) {
+      //   const result: TVideoDB[] = await db("videos").where(
+        //     "name",
+        //     "LIKE",
+        //     `%${q}%`
+        //   );
+        //   videosDB = result;
+        // } else {
+          //   const result: TVideoDB[] = await db("videos");
+          //   videosDB = result;
+          // }
 
-    if (q) {
-      const result: TVideoDB[] = await db("videos").where(
-        "name",
-        "LIKE",
-        `%${q}%`
-      );
-      videosDB = result;
-    } else {
-      const result: TVideoDB[] = await db("videos");
-      videosDB = result;
-    }
+    const q = req.query.q as string | undefined
 
+    const videoDatabase = new VideoDatabase()
+    const videosDB = await videoDatabase.findVideos(q)
+          
     const videos: Video[] = videosDB.map(
       (videoDB) =>
         new Video(
@@ -93,7 +97,9 @@ app.post("/videos", async (req: Request, res: Response) => {
       throw new Error("'duration' deve ser number")
     }
 
-    const [videoDBExist]: TVideoDB[] | undefined[] = await db("videos").where({id})
+    // const [videoDBExist]: TVideoDB[] | undefined[] = await db("videos").where({id})
+    const videoDatabase = new VideoDatabase()
+    const videoDBExist = await videoDatabase.findVideoById(id)
 
     if (videoDBExist) {
       res.status(400)
@@ -114,7 +120,8 @@ app.post("/videos", async (req: Request, res: Response) => {
       upload_at: newVideo.getUploadAt()
     }
 
-    await db("videos").insert(newVideoDB)
+    // await db("videos").insert(newVideoDB)
+    await videoDatabase.insertVideo(newVideoDB)
 
     res.status(200).send(newVideo)
 
@@ -138,7 +145,9 @@ app.put("/videos/:id", async (req: Request, res: Response) => {
     const id = req.params.id
     const {title, duration} = req.body
 
-    const [videoBD] : TVideoDB[] | undefined[] = await db("videos").where({id});
+    // const [videoBD] : TVideoDB[] | undefined[] = await db("videos").where({id});
+    const videoDatabase = new VideoDatabase()
+    const videoBD = await videoDatabase.findVideoById(id)
 
     if (!videoBD) {
       res.status(400)
@@ -170,7 +179,9 @@ app.put("/videos/:id", async (req: Request, res: Response) => {
       upload_at: videoToEdit.getUploadAt()
     }
 
-    await db("videos").update(updateVideoDB).where({id})
+    // await db("videos").update(updateVideoDB).where({id})
+    await videoDatabase.UpdateVideoById(id, updateVideoDB)
+
     res.status(200).send({videoAtualizado: videoToEdit})
 
   } catch (error) {
@@ -192,7 +203,9 @@ app.delete("/videos/:id", async (req: Request, res: Response) => {
   try {
     const id = req.params.id
 
-    const [videoInDB] : TVideoDB[] | undefined[] = await db("videos").where({id})
+    // const [videoInDB] : TVideoDB[] | undefined[] = await db("videos").where({id})
+    const videoDatabase = new VideoDatabase()
+    const videoInDB = await videoDatabase.findVideoById(id)
 
     if(!videoInDB) {
       res.status(400)
@@ -205,7 +218,9 @@ app.delete("/videos/:id", async (req: Request, res: Response) => {
       videoInDB.duration,
       videoInDB.upload_at,
     )
-    await db("videos").del().where({id})
+    
+    // await db("videos").del().where({id})
+    await videoDatabase.DeleteVideoById(id)
 
     res.status(200).send({message: "Vídeo deletado com sucesso!", video: videoToDelete})
 
